@@ -77,9 +77,9 @@ Verifiable social interaction powered by the blockchain.
 ## 🔗 Resources
 - **Arc Network Docs**: [docs.arc.network](https://docs.arc.network)
 - **Official Website**: [arc.network](https://arc.network)
-- **Community X**: [@arc_network_](https://x.com/arc_network_)
+- **Community X**: [@Arc](https://x.com/arc)
+- **Discord**: [Build on Arc](https://discord.com/invite/buildonarc)
 
 ---
 
 © 2026 acrFI. Built on Arc Network.
-
