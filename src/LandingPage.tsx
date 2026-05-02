@@ -181,7 +181,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
               and participate in the agentic onchain economy.
             </p>
             <div className="social-icons">
-              <a href="https://x.com/arc_network_" target="_blank" rel="noopener noreferrer" className="footer-icon-link">
+              <a href="https://x.com/arc" target="_blank" rel="noopener noreferrer" className="footer-icon-link">
                 <XIcon />
               </a>
               <a href="https://t.me/arc_network_official" target="_blank" rel="noopener noreferrer" className="footer-icon-link">
