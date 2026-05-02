@@ -1,88 +1,85 @@
-# arcFi 🌐
+# acrFI 🌐
 
-**arcFi** is a stablecoin-native SocialFi platform built on the **Arc Network**, designed to power the **Agentic Economy**. It allows users to trade **ARCKEYS** (creator tokens), join exclusive on-chain chatrooms, and build a verifiable on-chain social network.
-
----
-
-## 🏗️ Built on Arc Network
-
-arcFi leverages the core pillars of the **Arc Network**, a high-performance blockchain optimized for stablecoin-native finance and AI agents.
-
-### Core Network Pillars:
-- **Stablecoin Native**: Gas fees and transactions are powered by USDC, providing a familiar and stable experience.
-- **Sub-second Finality**: Transactions are confirmed almost instantly, enabling real-time social interactions.
-- **Agentic Economy**: Optimized for AI agents and human-to-agent interactions.
-- **Unified Balance**: Seamless asset management across the ecosystem.
+**acrFI** is a high-performance SocialFi platform built on the **Arc Network**, an open Layer-1 blockchain purpose-built for **programmable money**. Inspired by the SocialFi revolution, acrFI enables the **Agentic Economy** by allowing users to trade **ARCKEYS** (creator/agent tokens) with sub-second finality and native stablecoin settlement.
 
 ---
 
-## ✨ Features
+## 🏗️ Powered by Arc Network
 
-### 🔑 ARCKEYS Trading
-Trade creator-specific tokens (ARCKEYS) using a mathematical bonding curve. 
-- **Buy & Sell**: Purchase keys to support your favorite creators or agents.
-- **Value Discovery**: Prices adjust dynamically based on supply and demand.
+acrFI is designed to leverage the unique capabilities of the **Arc Network**, providing a seamless experience for both human users and AI agents.
 
-### 💬 On-Chain Messaging
-End-to-end communication stored directly on the Arc Network.
-- **Holder-Only Chats**: Access exclusive chatrooms by holding a creator's ARCKEY.
-- **Blockchain Verified**: Every message is a transaction, ensuring authenticity and permanence.
-
-### 📊 Professional Dashboard
-A sleek, real-time interface to manage your on-chain social portfolio.
-- **Portfolio Tracking**: Monitor your ARCKEY holdings and wallet balance.
-- **Explore**: Discover trending creators and agents on the network.
-- **Real-time Activity**: Live feed of global trades and on-chain events.
+### Key Infrastructure Features:
+- **USDC Native Gas**: Arc uses USDC as the native gas token, eliminating the need for volatile native assets for transaction fees.
+- **Sub-second Deterministic Finality**: Transactions are irreversible and settled in under 1 second.
+- **Agent-First Design**: Built-in support for **ERC-8004** (On-chain Identity & Reputation for AI Agents) and **ERC-8183** (On-chain Job Settlement).
+- **EVM Compatibility**: Standard Solidity smart contracts with optimized execution layers.
 
 ---
 
-## 🛠️ Technology Stack
+## ✨ Application Features (acrFI)
 
-- **Frontend**: React 18, TypeScript, Vite
-- **Styling**: Vanilla CSS (Modern design system)
-- **Blockchain**: Ethers.js
+### 🔑 ARCKEYS & Bonding Curves
+Own a piece of your favorite creator's or AI agent's network.
+- **Dynamic Pricing**: ARCKEYS use a mathematical bonding curve to determine price based on current supply.
+- **Value Discovery**: Early supporters benefit from the growth of a creator's ecosystem.
+- **Native Settlement**: All trades are settled instantly on-chain using USDC.
+
+### 💬 Holder-Exclusive Messaging
+Verifiable social interaction powered by the blockchain.
+- **Gated Access**: Join exclusive chatrooms that require holding specific ARCKEYS.
+- **On-Chain Communication**: Messages can be stored directly on-chain for permanence and transparency.
+- **Agent Interaction**: Chat and interact directly with autonomous AI agents registered on the Arc Network.
+
+### 📊 Social Portfolio Dashboard
+- **Real-time Trading Feed**: Monitor global activity and trending keys.
+- **Portfolio Analytics**: Track the value of your holdings and your own key's supply.
+- **On-Chain Explorer**: Direct integration with [ArcScan](https://testnet.arcscan.app) for transaction verification.
+
+---
+
+## 🛠️ Tech Stack
+
+- **Frontend**: React 18 + Vite + TypeScript
+- **Styling**: Premium Vanilla CSS Design System
+- **Web3**: Ethers.js v6
 - **Network**: Arc Testnet (Chain ID: `5042002`)
-- **Icons**: Lucide React
 
 ---
 
 ## 🚀 Getting Started
 
-### Prerequisites
-- Node.js (v18+)
-- A Web3 Wallet (e.g., MetaMask)
-
 ### Installation
+
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/arc-fi.git
+   git clone https://github.com/sndynto/acrFI.git
    ```
 2. Install dependencies:
    ```bash
    npm install
    ```
-3. Start the development server:
+3. Run in development:
    ```bash
    npm run dev
    ```
 
-### Network Configuration
-To interact with arcFi, add the **Arc Testnet** to your wallet:
-- **Network Name**: Arc Testnet
-- **RPC URL**: `https://rpc.testnet.arc.network`
-- **Chain ID**: `5042002` (0x4CEF52)
-- **Currency Symbol**: `USDC`
-- **Block Explorer**: `https://testnet.arcscan.app`
+### Wallet Configuration (Arc Testnet)
+| Parameter | Value |
+|-----------|-------|
+| **Network Name** | Arc Testnet |
+| **RPC URL** | `https://rpc.testnet.arc.network` |
+| **Chain ID** | `5042002` (0x4CEF52) |
+| **Currency Symbol** | `USDC` |
+| **Block Explorer** | `https://testnet.arcscan.app` |
 
 ---
 
-## 🔗 Links
-- **Official Docs**: [docs.arc.network](https://docs.arc.network)
-- **Block Explorer**: [testnet.arcscan.app](https://testnet.arcscan.app)
-- **Twitter/X**: [@arc_network_](https://x.com/arc_network_)
-- **Telegram**: [Arc Network Official](https://t.me/arc_network_official)
+## 🔗 Resources
+- **Arc Network Docs**: [docs.arc.network](https://docs.arc.network)
+- **Official Website**: [arc.network](https://arc.network)
+- **Community X**: [@arc_network_](https://x.com/arc_network_)
 
 ---
 
-© 2026 arcFi. Powered by Arc Network.
+© 2026 acrFI. Built on Arc Network.
 
