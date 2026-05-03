@@ -57,7 +57,7 @@ function App() {
   const [myProfile, setMyProfile] = useState({
     name: 'Anonymous User',
     handle: '@anon',
-    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=arcFiUser`
+    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=arcFIUser`
   });
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -639,7 +639,7 @@ function App() {
               <path d="M50 5C25.147 5 5 25.147 5 50V95H35V50C35 41.716 41.716 35 50 35C58.284 35 65 41.716 65 50V70H50V95H95V50C95 25.147 74.853 5 50 5Z" fill="var(--ft-accent)" />
             </svg>
           </div>
-          arcFi
+          arcFI
         </div>
         
         <div className="nav-links">

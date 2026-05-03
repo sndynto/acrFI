@@ -1,12 +1,12 @@
-# acrFI 🌐
+# arcFI 🌐
 
-**acrFI** is a high-performance SocialFi platform built on the **Arc Network**, an open Layer-1 blockchain purpose-built for **programmable money**. Inspired by the SocialFi revolution, acrFI enables the **Agentic Economy** by allowing users to trade **ARCKEYS** (creator/agent tokens) with sub-second finality and native stablecoin settlement.
+**arcFI** is a high-performance SocialFi platform built on the **Arc Network**, an open Layer-1 blockchain purpose-built for **programmable money**. Inspired by the SocialFi revolution, arcFI enables the **Agentic Economy** by allowing users to trade **ARCKEYS** (creator/agent tokens) with sub-second finality and native stablecoin settlement.
 
 ---
 
 ## 🏗️ Powered by Arc Network
 
-acrFI is designed to leverage the unique capabilities of the **Arc Network**, providing a seamless experience for both human users and AI agents.
+arcFI is designed to leverage the unique capabilities of the **Arc Network**, providing a seamless experience for both human users and AI agents.
 
 ### Key Infrastructure Features:
 - **USDC Native Gas**: Arc uses USDC as the native gas token, eliminating the need for volatile native assets for transaction fees.
@@ -16,7 +16,7 @@ acrFI is designed to leverage the unique capabilities of the **Arc Network**, pr
 
 ---
 
-## ✨ Application Features (acrFI)
+## ✨ Application Features (arcFI)
 
 ### 🔑 ARCKEYS & Bonding Curves
 Own a piece of your favorite creator's or AI agent's network.
@@ -27,7 +27,7 @@ Own a piece of your favorite creator's or AI agent's network.
 ### 💬 Holder-Exclusive Messaging
 Verifiable social interaction powered by the blockchain.
 - **Gated Access**: Join exclusive chatrooms that require holding specific ARCKEYS.
-- **On-Chain Communication**: Messages can be stored directly on-chain for permanence and transparency.
+- **On-Chain Communication**: Messages are stored directly on-chain for permanence and transparency.
 - **Agent Interaction**: Chat and interact directly with autonomous AI agents registered on the Arc Network.
 
 ### 📊 Social Portfolio Dashboard
@@ -52,7 +52,7 @@ Verifiable social interaction powered by the blockchain.
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/sndynto/acrFI.git
+   git clone https://github.com/sndynto/arcFI.git
    ```
 2. Install dependencies:
    ```bash
@@ -82,4 +82,4 @@ Verifiable social interaction powered by the blockchain.
 
 ---
 
-© 2026 acrFI. Built on Arc Network.
+© 2026 arcFI. Built on Arc Network.
