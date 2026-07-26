@@ -3,6 +3,10 @@ import { ethers } from 'ethers';
 import { Mail, MessageSquare } from 'lucide-react';
 import './LandingPage.css';
 
+type EthereumProvider = {
+  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+};
+
 interface LandingPageProps {
   onLogin: (address: string) => void;
 }
@@ -24,9 +28,23 @@ const GoogleIcon = () => (
 
 declare global {
   interface Window {
-    ethereum?: any;
+    ethereum?: EthereumProvider;
   }
 }
+
+const getErrorMessage = (error: unknown) => (
+  typeof error === 'object' && error !== null && 'message' in error
+    ? String((error as { message?: unknown }).message)
+    : 'Unknown error'
+);
+
+const getErrorCode = (error: unknown) => (
+  typeof error === 'object' && error !== null && 'code' in error
+    ? (error as { code?: unknown }).code
+    : undefined
+);
+
+const createMockAddress = () => ethers.Wallet.createRandom().address;
 
 const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
   const [isConnecting, setIsConnecting] = useState(false);
@@ -36,7 +54,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
       try {
         setIsConnecting(true);
         const provider = new ethers.BrowserProvider(window.ethereum);
-        const accounts = await provider.send("eth_requestAccounts", []);
+        const accounts = await provider.send("eth_requestAccounts", []) as string[];
 
         if (accounts.length > 0) {
           // Switch to Arc Testnet
@@ -45,9 +63,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
               method: 'wallet_switchEthereumChain',
               params: [{ chainId: '0x4CEF52' }], // 5042002 in hex
             });
-          } catch (switchError: any) {
+          } catch (switchError) {
             // This error code indicates that the chain has not been added to MetaMask.
-            if (switchError.code === 4902) {
+            if (getErrorCode(switchError) === 4902) {
               try {
                 await window.ethereum.request({
                   method: 'wallet_addEthereumChain',
@@ -65,9 +83,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                     }
                   ],
                 });
-              } catch (addError: any) {
+              } catch (addError) {
                 console.error("Failed to add Arc Testnet", addError);
-                alert(`Gagal menambahkan jaringan Arc Testnet otomatis. Pesan error dari MetaMask: ${addError?.message || 'Unknown error'}`);
+                alert(`Gagal menambahkan jaringan Arc Testnet otomatis. Pesan error dari MetaMask: ${getErrorMessage(addError)}`);
                 return;
               }
             } else {
@@ -147,17 +165,17 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
           </div>
 
           <div className="social-login-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <button className="social-button" onClick={() => onLogin('0x' + Math.random().toString(16).slice(2, 42))}>
+            <button className="social-button" onClick={() => onLogin(createMockAddress())}>
               <XIcon />
               Twitter
             </button>
-            <button className="social-button" onClick={() => onLogin('0x' + Math.random().toString(16).slice(2, 42))}>
+            <button className="social-button" onClick={() => onLogin(createMockAddress())}>
               <GoogleIcon />
               Google
             </button>
           </div>
 
-          <button className="social-button" style={{ width: '100%' }} onClick={() => onLogin('0x' + Math.random().toString(16).slice(2, 42))}>
+          <button className="social-button" style={{ width: '100%' }} onClick={() => onLogin(createMockAddress())}>
             <Mail size={18} />
             Continue with Email
           </button>
@@ -192,7 +210,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
         </div>
 
         <div className="footer-bottom">
-          <div>© 2026 arcFI. ALL RIGHTS RESERVED</div>
+          <div>(c) 2026 arcFI. ALL RIGHTS RESERVED</div>
           <div className="footer-bottom-links">
             <a href="https://docs.arc.network" target="_blank" rel="noopener noreferrer" className="footer-bottom-link">DOCS</a>
             <a href="https://arc.network/terms" target="_blank" rel="noopener noreferrer" className="footer-bottom-link">TERMS</a>

@@ -12,6 +12,16 @@ dist
 dist-ssr
 *.local
 
+# Secrets — NEVER commit private keys / env files
+.env
+.env.*
+!.env.example
+
+# Foundry
+out-forge
+cache
+broadcast
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

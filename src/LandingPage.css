@@ -79,7 +79,7 @@
 }
 
 .login-button {
-  background: linear-gradient(135deg, var(--accent), #00a8ff);
+  background: linear-gradient(135deg, var(--ft-accent), #00a8ff);
   color: white;
   border: none;
   padding: 14px 28px;
@@ -237,9 +237,9 @@
 }
 
 .footer-icon-link:hover {
-  color: var(--accent);
+  color: var(--ft-accent);
   background: rgba(255, 255, 255, 0.1);
-  border-color: var(--accent);
+  border-color: var(--ft-accent);
   transform: translateY(-2px);
 }
 

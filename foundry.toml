@@ -1,0 +1,20 @@
+# Foundry config for arcFI / ArcKeys.sol
+# Docs: https://book.getfoundry.sh/reference/config/
+
+[profile.default]
+src = "contracts"          # ArcKeys.sol lives in contracts/, not src/
+out = "out-forge"          # keep Foundry artifacts out of Vite's "dist"/"out"
+libs = ["lib"]
+script = "script"
+test = "test"
+solc = "0.8.24"            # matches pragma in ArcKeys.sol
+optimizer = true
+optimizer_runs = 200
+# Only compile Solidity under contracts/ + script/ + test/, ignore src/ (React/TS)
+# (Foundry ignores non-.sol files automatically.)
+
+[rpc_endpoints]
+arc_testnet = "${ARC_TESTNET_RPC_URL}"
+
+# Arc Testnet has a 20 Gwei base-fee floor. Foundry estimates fees from the RPC,
+# but if a broadcast is rejected as "underpriced", pass --with-gas-price 20000000000
