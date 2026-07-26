@@ -2,22 +2,55 @@ import { ethers } from 'ethers';
 import { ARC_KEYS_ABI, ARC_KEYS_CONTRACT_ADDRESS } from './arcKeys';
 
 /**
- * Dedicated read provider pointing at Arc's public RPC. Use this (not the wallet's
- * injected provider) for all reads — especially queryFilter/getLogs — because
- * wallet RPCs (e.g. MetaMask) often cap the eth_getLogs block range and reject
- * full-history queries. Writes still go through the wallet signer.
+ * Read strategy (browser-safe):
+ *  - eth_call reads (getProfile, totalSupply, balanceOf, pendingWithdrawals) use
+ *    the wallet's injected provider (window.ethereum) — no CORS, and the wallet
+ *    is on Arc during normal use.
+ *  - event/log reads (creators, trade history) use the ArcScan REST API, which
+ *    the browser can call cross-origin. A direct RPC getLogs from the browser is
+ *    blocked by CORS, which is why on-chain profiles/feed weren't showing.
  */
 const ARC_RPC_URL = 'https://rpc.testnet.arc.network';
+const ARCSCAN_API = 'https://testnet.arcscan.app/api';
 
-// Block the ArcKeys contract was deployed at. Event queries start here (not 0)
-// so the RPC never rejects an over-wide eth_getLogs range.
+// Block the ArcKeys contract was deployed at. Log queries start here.
 export const ARC_KEYS_DEPLOY_BLOCK = 53763822; // ArcKeys v2 deploy block
 
-let _arcProvider: ethers.JsonRpcProvider | null = null;
-export const getArcProvider = (): ethers.JsonRpcProvider => {
-  if (!_arcProvider) _arcProvider = new ethers.JsonRpcProvider(ARC_RPC_URL);
-  return _arcProvider;
+let _rpcProvider: ethers.JsonRpcProvider | null = null;
+/** Provider for eth_call reads: prefer the wallet (no CORS), else the Arc RPC. */
+export const getArcProvider = (): ethers.Provider => {
+  if (typeof window !== 'undefined' && window.ethereum) {
+    return new ethers.BrowserProvider(window.ethereum);
+  }
+  if (!_rpcProvider) _rpcProvider = new ethers.JsonRpcProvider(ARC_RPC_URL);
+  return _rpcProvider;
 };
+
+interface ArcscanLog {
+  topics: (string | null)[]; // ArcScan pads unused topics with null
+  data: string;
+  transactionHash?: string;
+  blockNumber?: string;
+}
+
+/** ArcScan pads topics to 4 with null; keep only the real hex topics for ethers. */
+const cleanTopics = (topics: (string | null)[]): string[] =>
+  (topics ?? []).filter((t): t is string => typeof t === 'string' && t.startsWith('0x'));
+
+/** Fetch this contract's event logs for `topic0` via the ArcScan REST API (CORS-safe). */
+const arcscanGetLogs = async (topic0: string): Promise<ArcscanLog[]> => {
+  const url =
+    `${ARCSCAN_API}?module=logs&action=getLogs` +
+    `&fromBlock=${ARC_KEYS_DEPLOY_BLOCK}&toBlock=latest` +
+    `&address=${ARC_KEYS_CONTRACT_ADDRESS}&topic0=${topic0}`;
+  const res = await fetch(url);
+  if (!res.ok) return [];
+  const json = (await res.json()) as { status?: string; result?: unknown };
+  return Array.isArray(json.result) ? (json.result as ArcscanLog[]) : [];
+};
+
+const toBlockNumber = (v: string | undefined): number =>
+  !v ? 0 : v.startsWith('0x') ? parseInt(v, 16) : Number(v);
 
 /**
  * Thin ethers v6 wrapper around the deployed ArcKeys contract.
@@ -83,12 +116,14 @@ export const buyKeys = async (
   signer: ethers.Signer,
   subject: string,
   amount: bigint = 1n,
-  slippageBps: bigint = 200n, // 2%
 ): Promise<ethers.TransactionResponse> => {
-  const { net } = await quoteBuy(getArcProvider(), subject, amount);
-  const maxCost = net + (net * slippageBps) / 10_000n;
+  // Quote via the signer's own (on-Arc) provider to avoid a wrong-network read.
+  const { net } = await quoteBuy(signer.provider ?? getArcProvider(), subject, amount);
   const contract = getWriteContract(signer);
-  return contract.buyKeys(subject, amount, maxCost, { value: maxCost });
+  // Send EXACTLY the quoted cost as value, and use it as maxCost. This needs only
+  // `net` USDC in the wallet (no extra buffer that would inflate the balance
+  // required and cause an estimate-gas revert when funds are just enough).
+  return contract.buyKeys(subject, amount, net, { value: net });
 };
 
 /**
@@ -102,7 +137,7 @@ export const sellKeys = async (
   amount: bigint = 1n,
   slippageBps: bigint = 200n, // 2%
 ): Promise<ethers.TransactionResponse> => {
-  const { net } = await quoteSell(getArcProvider(), subject, amount);
+  const { net } = await quoteSell(signer.provider ?? getArcProvider(), subject, amount);
   const minProceeds = net - (net * slippageBps) / 10_000n;
   const contract = getWriteContract(signer);
   return contract.sellKeys(subject, amount, minProceeds);
@@ -195,65 +230,19 @@ export interface TradeEvent {
   blockNumber?: number;
 }
 
-/**
- * Subscribe to live Trade events. Returns an unsubscribe function.
- * Filter is scoped to THIS contract address, so it never picks up Arc's
- * EIP-7708 native Transfer logs (which come from the system emitter).
- */
-export const watchTrades = (
-  provider: ethers.Provider,
-  handler: (event: TradeEvent) => void,
-): (() => void) => {
-  const contract = getReadContract(provider);
-  const listener = (
-    trader: string,
-    subject: string,
-    isBuy: boolean,
-    amount: bigint,
-    grossPrice: bigint,
-    protocolFee: bigint,
-    creatorFee: bigint,
-    supply: bigint,
-    // ethers v6 passes a ContractEventPayload as the final argument.
-    payload?: { log?: { transactionHash?: string; blockNumber?: number } },
-  ) =>
-    handler({
-      trader,
-      subject,
-      isBuy,
-      amount,
-      grossPrice,
-      protocolFee,
-      creatorFee,
-      supply,
-      txHash: payload?.log?.transactionHash,
-      blockNumber: payload?.log?.blockNumber,
-    });
-
-  void contract.on('Trade', listener);
-  return () => {
-    void contract.off('Trade', listener);
-  };
+let _iface: ethers.Interface | null = null;
+const keysInterface = (): ethers.Interface => {
+  if (!_iface) _iface = new ethers.Interface(ARC_KEYS_ABI);
+  return _iface;
 };
+const TRADE_TOPIC = ethers.id('Trade(address,address,bool,uint256,uint256,uint256,uint256,uint256)');
+const PROFILE_UPDATED_TOPIC = ethers.id('ProfileUpdated(address,string,string,string)');
 
-/**
- * Backfill historical Trade events via getLogs. Use to seed the feed on load.
- * `fromBlock` defaults to 0; pass a recent block if the RPC caps log ranges.
- */
-export const getTradeHistory = async (
-  provider: ethers.Provider,
-  fromBlock: number | bigint = ARC_KEYS_DEPLOY_BLOCK,
-  toBlock: number | bigint | 'latest' = 'latest',
-): Promise<TradeEvent[]> => {
-  const contract = getReadContract(provider);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const logs: any[] = await contract.queryFilter(
-    contract.filters.Trade(),
-    fromBlock,
-    toBlock,
-  );
-  return logs.map((log) => {
-    const a = log.args ?? {};
+const decodeTradeLog = (log: ArcscanLog): TradeEvent | null => {
+  try {
+    const parsed = keysInterface().parseLog({ topics: cleanTopics(log.topics), data: log.data });
+    if (!parsed) return null;
+    const a = parsed.args;
     return {
       trader: a.trader ?? a[0],
       subject: a.subject ?? a[1],
@@ -264,9 +253,53 @@ export const getTradeHistory = async (
       creatorFee: a.creatorFee ?? a[6],
       supply: a.supply ?? a[7],
       txHash: log.transactionHash,
-      blockNumber: log.blockNumber,
-    } as TradeEvent;
-  });
+      blockNumber: toBlockNumber(log.blockNumber),
+    };
+  } catch {
+    return null;
+  }
+};
+
+/** Backfill Trade events from the ArcScan logs API (browser/CORS-safe). */
+export const getTradeHistory = async (
+  _provider?: ethers.Provider,
+): Promise<TradeEvent[]> => {
+  const logs = await arcscanGetLogs(TRADE_TOPIC);
+  return logs.map(decodeTradeLog).filter((t): t is TradeEvent => t !== null);
+};
+
+/**
+ * Poll for new Trade events every 15s (ArcScan-based; browser-safe). Returns an
+ * unsubscribe function. The first poll seeds the "seen" set without firing, so
+ * only genuinely new trades reach the handler.
+ */
+export const watchTrades = (
+  _provider: ethers.Provider,
+  handler: (event: TradeEvent) => void,
+): (() => void) => {
+  let stopped = false;
+  let seeded = false;
+  const seen = new Set<string>();
+  const tick = async () => {
+    if (stopped) return;
+    try {
+      const trades = await getTradeHistory();
+      for (const t of trades) {
+        const key = `${t.txHash ?? ''}-${t.subject}-${t.trader}-${t.blockNumber ?? 0}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        if (seeded) handler(t);
+      }
+      seeded = true;
+    } catch {
+      // ignore; retry next tick
+    }
+    if (!stopped) setTimeout(tick, 15000);
+  };
+  void tick();
+  return () => {
+    stopped = true;
+  };
 };
 
 export interface OnchainCreator {
@@ -283,32 +316,31 @@ export interface OnchainCreator {
  * edited by ANY wallet shows up for everyone — it's read from chain, not local.
  */
 export const getCreators = async (
-  provider: ethers.Provider,
-  fromBlock: number | bigint = ARC_KEYS_DEPLOY_BLOCK,
+  _provider?: ethers.Provider,
 ): Promise<OnchainCreator[]> => {
-  const contract = getReadContract(provider);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const logs: any[] = await contract.queryFilter(
-    contract.filters.ProfileUpdated(),
-    fromBlock,
-    'latest',
-  );
+  const logs = await arcscanGetLogs(PROFILE_UPDATED_TOPIC);
 
-  // Keep only the latest profile per address (events arrive in block order).
+  // Keep only the latest profile per address (logs come back in block order).
   const latest = new Map<string, OnchainCreator>();
   for (const log of logs) {
-    const a = log.args ?? {};
-    const address: string = a.subject ?? a[0];
-    if (!address) continue;
-    latest.set(address.toLowerCase(), {
-      address,
-      name: a.name ?? a[1] ?? '',
-      handle: a.handle ?? a[2] ?? '',
-      avatar: a.avatarURI ?? a[3] ?? '',
-      supply: 0,
-    });
+    try {
+      const parsed = keysInterface().parseLog({ topics: cleanTopics(log.topics), data: log.data });
+      if (!parsed) continue;
+      const address: string = parsed.args.subject ?? parsed.args[0];
+      if (!address) continue;
+      latest.set(address.toLowerCase(), {
+        address,
+        name: parsed.args.name ?? parsed.args[1] ?? '',
+        handle: parsed.args.handle ?? parsed.args[2] ?? '',
+        avatar: parsed.args.avatarURI ?? parsed.args[3] ?? '',
+        supply: 0,
+      });
+    } catch {
+      // skip undecodable log
+    }
   }
 
+  const provider = getArcProvider();
   return Promise.all(
     Array.from(latest.values()).map(async (creator) => {
       try {

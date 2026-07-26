@@ -126,6 +126,34 @@ const isSafeAvatar = (url: string | undefined): url is string =>
 const safeAvatar = (url: string | undefined, fallbackSeed: string): string =>
   isSafeAvatar(url) ? url : avatarFor(fallbackSeed);
 
+const ARC_CHAIN_ID_HEX = '0x4CEF52'; // 5042002
+
+// Ensure the wallet is on Arc Testnet before any on-chain write. Transactions
+// (buy/sell/profile/withdraw) must run on Arc; if the wallet drifted to another
+// network (e.g. after bridging), switch it back (adding the chain if unknown).
+const ensureArcNetwork = async (ethereum: EthereumProvider): Promise<void> => {
+  const current = (await ethereum.request({ method: 'eth_chainId' })) as string;
+  if (current?.toLowerCase() === ARC_CHAIN_ID_HEX.toLowerCase()) return;
+  try {
+    await ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: ARC_CHAIN_ID_HEX }] });
+  } catch (err) {
+    if ((err as { code?: number })?.code === 4902) {
+      await ethereum.request({
+        method: 'wallet_addEthereumChain',
+        params: [{
+          chainId: ARC_CHAIN_ID_HEX,
+          chainName: 'Arc Testnet',
+          nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 18 },
+          rpcUrls: ['https://rpc.testnet.arc.network'],
+          blockExplorerUrls: ['https://testnet.arcscan.app'],
+        }],
+      });
+    } else {
+      throw err;
+    }
+  }
+};
+
 // Convert a decoded on-chain Trade event into a feed row.
 const tradeEventToFeedItem = (
   event: TradeEvent,
@@ -449,8 +477,21 @@ function App() {
 
     setIsTrading(true);
     try {
+      await ensureArcNetwork(ethereum);
       const provider = new ethers.BrowserProvider(ethereum);
       const signer = await provider.getSigner();
+
+      // Precise gas/balance check: the CONNECTED wallet must hold USDC on Arc
+      // (gas is paid in USDC — even a free key needs gas). Names in Explore come
+      // from ArcScan and show regardless of which wallet is connected, so it's
+      // easy to be on a wallet that was never funded on Arc.
+      const arcBalance = await provider.getBalance(walletAddress);
+      if (arcBalance === 0n) {
+        setToastMessage(`Wallet ${formatAddress(walletAddress)} has 0 USDC on Arc. Fund THIS address at faucet.circle.com (pick Arc), then retry.`);
+        setTimeout(() => setToastMessage(''), 7000);
+        return;
+      }
+
       const currentPrice = getPrice(selectedUser.supply);
       const hasRealSubject = !!selectedUser.address && ethers.isAddress(selectedUser.address);
       const useContract = isArcKeysDeployed() && hasRealSubject;
@@ -507,8 +548,20 @@ function App() {
     } catch (error) {
       console.error('Trade rejected:', error);
       const code = typeof error === 'object' && error !== null && 'code' in error ? (error as { code?: string | number }).code : undefined;
-      setToastMessage(code === 'ACTION_REJECTED' || code === 4001 ? 'Transaction rejected by user.' : 'Transaction failed. Make sure you have enough ARC for gas.');
-      setTimeout(() => setToastMessage(''), 4000);
+      const reason = (error as { shortMessage?: string; reason?: string })?.shortMessage
+        || (error as { reason?: string })?.reason || '';
+      const raw = `${reason} ${String((error as { message?: string })?.message ?? '')}`.toLowerCase();
+      const lowBalance = /insufficient|missing revert|funds|exceeds balance/.test(raw);
+      setToastMessage(
+        code === 'ACTION_REJECTED' || code === 4001
+          ? 'Transaction rejected by user.'
+          : lowBalance
+            ? 'Buy failed — likely not enough USDC. Top up on Arc at faucet.circle.com and retry.'
+            : reason
+              ? `Buy failed: ${reason}`
+              : 'Buy failed. Make sure you are on Arc Testnet with enough USDC.',
+      );
+      setTimeout(() => setToastMessage(''), 6000);
     } finally {
       setIsTrading(false);
     }
@@ -520,6 +573,7 @@ function App() {
 
     setIsTrading(true);
     try {
+      await ensureArcNetwork(ethereum);
       const provider = new ethers.BrowserProvider(ethereum);
       const signer = await provider.getSigner();
       const currentPrice = getPrice(Math.max(userToSell.supply - 1, 0));
@@ -584,6 +638,7 @@ function App() {
     if (isArcKeysDeployed() && ethereum) {
       try {
         setToastMessage('Saving profile on-chain — confirm in your wallet…');
+        await ensureArcNetwork(ethereum);
         const provider = new ethers.BrowserProvider(ethereum);
         const signer = await provider.getSigner();
         const tx = await updateProfile(signer, name, handle, myProfile.avatar);
@@ -613,6 +668,7 @@ function App() {
     setClaiming(true);
     try {
       setToastMessage('Claiming fees — confirm in your wallet…');
+      await ensureArcNetwork(ethereum);
       const provider = new ethers.BrowserProvider(ethereum);
       const signer = await provider.getSigner();
       const tx = await withdraw(signer);
@@ -641,6 +697,7 @@ function App() {
 
     setIsSendingMsg(true);
     try {
+      await ensureArcNetwork(ethereum);
       const provider = new ethers.BrowserProvider(ethereum);
       const signer = await provider.getSigner();
 
